@@ -19,7 +19,7 @@ def plot_l(l_channel: torch.Tensor):
     Args:
         l_channel (torch.Tensor): Tensor containing the L channel values. Size 1xHxW
     """
-    l_channel = l_channel.squeeze()  # Remove unnecessary dimension --> we now have shape [H, W] and not [1, H, W]
+    l_channel = l_channel.squeeze()  # remove unnecessary dimension --> we now have shape [H, W] and not [1, H, W]
     plt.figure(figsize=(6, 6))
     plt.imshow(l_channel, cmap='gray')
     plt.axis('off')
@@ -78,13 +78,12 @@ def plot_rgb(rgb_image: torch.Tensor):
     Args:
         rgb_image (torch.Tensor): Tensor containing the RGB image values. Size 3xHxW
     """
-    rgb_image = rgb_image.permute(1, 2, 0)  # Convert from CxHxW to HxWxC for plotting
+    rgb_image = rgb_image.permute(1, 2, 0)  # convert from CxHxW to HxWxC for plotting
     plt.figure(figsize=(6, 6))
     plt.imshow(rgb_image)
     plt.axis('off')
     plt.show()
-    
-# We build a function that will later turn useful: given an L channel, and an AB channel, we reconstruct the original image
+
 def reconstruct_lab(l_channel: torch.Tensor, ab_channels: Tuple[torch.Tensor, torch.Tensor]):
     """
     Reconstructs an RGB image from its L, A, and B channels.
@@ -100,22 +99,46 @@ def reconstruct_lab(l_channel: torch.Tensor, ab_channels: Tuple[torch.Tensor, to
     l_channel = l_channel.squeeze()  # from 1xHxW to HxW
     lab_image = torch.stack((l_channel, a_channel, b_channel), dim=0)
 
-    # Revert normalization of L channel
+    # revert normalization of L channel
     l_channel_np = l_channel.cpu().numpy() * 100
 
-    # Revert normalization of A and B channels
+    # revert normalization of A and B channels
     ab_channels_np = torch.stack((a_channel, b_channel), dim=0).permute(1, 2, 0).cpu().numpy() * 255 - 128
 
-    # Stack L, A, B channels
+    # stack L, A, B channels
     lab_image_reconstructed = np.zeros((lab_image.shape[1], lab_image.shape[2], 3))
     lab_image_reconstructed[:, :, 0] = l_channel_np
     lab_image_reconstructed[:, :, 1:] = ab_channels_np
 
-    # Convert LAB image to RGB
+    # convert LAB image to RGB
     rgb_image = lab2rgb(lab_image_reconstructed)
 
-    # Display the RGB image
+    # display the RGB image
     plt.figure(figsize=(6, 6))
     plt.imshow(rgb_image)
     plt.axis('off')
     plt.show()
+    
+def plot_predicted_image(model: torch.nn.Module, img: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], device: str = "cuda"):
+   """
+   Plot the predicted colorized image using the provided model and input tensors.
+
+   Args:
+       model (torch.nn.Module): The PyTorch model used for colorization.
+       img (Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]): A tuple containing the following tensors:
+           - RGB image tensor: Size([3, H, W])
+           - L channel tensor: Size([1, H, W])
+           - A channel tensor: Size([H, W])
+           - B channel tensor: Size([H, W])
+           - AB channels tensor: Size([2, H, W])
+       device (str, optional): The device to use for computations. Default is "cuda".
+   """
+   l_channel = img[1].to(device)
+   rgb = img[0].to(device)
+
+   with torch.no_grad():
+       ab_pred = model(l_channel)
+
+   plot_l(l_channel.detach().cpu())
+   plot_rgb(rgb.detach().cpu())
+   reconstruct_lab(l_channel.detach().cpu(), ab_pred.detach().cpu())
