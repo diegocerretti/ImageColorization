@@ -49,28 +49,6 @@ def plot_b(b_channel: torch.Tensor):
     plt.axis('off')
     plt.show()
 
-# FORSE QUESTA FUNZIONE NON CI SERVE A NULLA ALLA FINE
-# def plot_ab(ab_channels: torch.Tensor, l_values=[25, 50, 75]):
-#     """
-#     Plot the AB channels of a Lab image with different L values.
-
-#     Args:
-#         ab_channels (torch.Tensor): Tensor containing the AB channel values.
-#         l_values (List[int], optional): List of L values to use for plotting. Defaults to [25, 50, 75].
-#     """
-#     if ab_channels.shape[0] == 2:  # Assuming ab_channels shape is initially (2, H, W)
-#         ab_channels = ab_channels.permute(1, 2, 0)  # Change to (H, W, 2)
-#     for l in l_values:
-#         lab_image = np.zeros((ab_channels.shape[0], ab_channels.shape[1], 3)) # HxWx3
-#         lab_image[:, :, 0] = l # Set the L channel to one of the specified L values
-#         lab_image[:, :, 1:] = ab_channels * 255 - 128  # Scale AB channels correctly for lab2rgb
-#         rgb_image = lab2rgb(lab_image)
-#         plt.figure(figsize=(6, 6))
-#         plt.imshow(rgb_image)
-#         plt.title(f'L = {l}')
-#         plt.axis('off')
-#         plt.show()
-
 def plot_rgb(rgb_image: torch.Tensor):
     """
     Plot an RGB image.
