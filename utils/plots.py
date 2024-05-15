@@ -96,6 +96,37 @@ def reconstruct_lab(l_channel: torch.Tensor, ab_channels: Tuple[torch.Tensor, to
     plt.imshow(rgb_image)
     plt.axis('off')
     plt.show()
+
+def plot_ab(ab_channels: torch.Tensor, l_values=[20, 40, 80]):
+
+    # Retrieve the A and B channels from the tensor
+    a = ab_channels[0].cpu()
+    b = ab_channels[1].cpu()
+
+    for l_value in l_values:
+        # Create an L channel tensor filled with the constant L value, shaped appropriately
+        l = torch.full_like(a, l_value)  # Create a full tensor for L
+
+        # Stack the L, A, B channels to form the complete LAB image tensor
+        lab_image = torch.stack((l, a, b), dim=0)
+
+        # Convert the tensor to a numpy array for further processing
+        lab_image_np = lab_image.permute(1, 2, 0).numpy()
+
+        # Denormalize the LAB values
+        # L channel: Originally scaled to [0, 100] in the dataset preparation
+        # A and B channels: Normalize from [-1, 1] (assumed here) back to [-127, 128]
+        lab_image_np[:, :, 1:] = lab_image_np[:, :, 1:] * 255 - 127  # Scale A and B channels
+
+        # Convert the LAB image to RGB using skimage's lab2rgb function
+        rgb_image = lab2rgb(lab_image_np)
+
+        # Plot the RGB image
+        plt.figure(figsize=(6, 6))
+        plt.imshow(rgb_image)
+        plt.title(f'L = {l_value}')
+        plt.axis('off')
+        plt.show()
     
 def plot_predicted_image(model: torch.nn.Module, img: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], device: str = "cuda"):
    """
