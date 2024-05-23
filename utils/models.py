@@ -9,6 +9,7 @@ Authors: Diego Cerretti, Beatrice Citterio, Mattia Martino, Sandro Mikautadze
 import torch
 import torch.nn as nn
 from pathlib import Path
+from typing import Optional
 
 class CNN(nn.Module):
     """
@@ -145,14 +146,14 @@ class BaselineCNN(nn.Module):
         x = self.sigmoid(x)
         return x
 
-def save_model(model: torch.nn.Module, model_name: str, model_dir: str = "models"):
+def save_model(model: torch.nn.Module, model_name: str, model_dir: Optional[str] = "models"):
     """
     Save a PyTorch model to a pth file.
 
     Args:
         model (torch.nn.Module): The PyTorch model to be saved.
         model_name (str): The name of the model file (e.g., "baseline"). No extension needed.
-        model_dir (str, optional): The directory where the model file will be saved. Default is "models".
+        model_dir (Optional[str]): The directory where the model file will be saved. Default is "models".
     """
     # create the model directory if it doesn't exist
     model_dir_path = Path(model_dir)
