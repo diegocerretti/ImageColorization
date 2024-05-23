@@ -10,7 +10,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage.color import lab2rgb
-from typing import Tuple, List 
+from typing import Tuple, List, Optional
 
 def plot_l(l_channel: torch.Tensor):
     """
@@ -62,13 +62,13 @@ def plot_rgb(rgb_image: torch.Tensor):
     plt.axis('off')
     plt.show()
 
-def plot_ab(ab_channels: torch.Tensor, l_values: List[int] = [20, 40, 80]):
+def plot_ab(ab_channels: torch.Tensor, l_values: Optional[List[int]] = [20, 40, 80]):
     """
     Plot RGB images reconstructed from constant L values and given A and B channels.
 
     Args:
         ab_channels (torch.Tensor): Tensor containing the A and B channel values. Size 2xHxW
-        l_values (List[int], optional): List of L values to use for reconstruction. Default is [20, 40, 80].
+        l_values (Optional[List[int]]): List of L values to use for reconstruction. Default is [20, 40, 80].
     """
     # Retrieve the A and B channels from the tensor
     a = ab_channels[0].cpu()
@@ -134,14 +134,14 @@ def reconstruct_lab(l_channel: torch.Tensor, ab_channels: Tuple[torch.Tensor, to
     plt.axis('off')
     plt.show()
     
-def plot_model_pred(l: torch.Tensor, model: torch.nn.Module, device: str = "cuda"):
+def plot_model_pred(l: torch.Tensor, model: torch.nn.Module, device: Optional[str] = "cuda"):
     """
     Plot the predicted colorized image using the provided model and L channel tensor.
 
     Args:
         l (torch.Tensor): Tensor containing the L channel values. Size 1xHxW.
         model (torch.nn.Module): The PyTorch model used for colorization.
-        device (str, optional): The device to use for computations. Defaults to "cuda".
+        device (Optional[str]): The device to use for computations. Defaults to "cuda".
     """
     input = l.to(device).unsqueeze(0)
     ab_pred = model(input).squeeze(0)
