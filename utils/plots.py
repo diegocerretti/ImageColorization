@@ -10,7 +10,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage.color import lab2rgb
-from typing import Tuple
+from typing import Tuple, List 
 
 def plot_l(l_channel: torch.Tensor):
     """
@@ -62,8 +62,14 @@ def plot_rgb(rgb_image: torch.Tensor):
     plt.axis('off')
     plt.show()
 
-def plot_ab(ab_channels: torch.Tensor, l_values=[20, 40, 80]):
+def plot_ab(ab_channels: torch.Tensor, l_values: List[int] = [20, 40, 80]):
+    """
+    Plot RGB images reconstructed from constant L values and given A and B channels.
 
+    Args:
+        ab_channels (torch.Tensor): Tensor containing the A and B channel values. Size 2xHxW
+        l_values (List[int], optional): List of L values to use for reconstruction. Default is [20, 40, 80].
+    """
     # Retrieve the A and B channels from the tensor
     a = ab_channels[0].cpu()
     b = ab_channels[1].cpu()
@@ -92,30 +98,6 @@ def plot_ab(ab_channels: torch.Tensor, l_values=[20, 40, 80]):
         plt.title(f'L = {l_value}')
         plt.axis('off')
         plt.show()
-    
-# def plot_predicted_image(model: torch.nn.Module, img: Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor], device: str = "cuda"):
-#    """
-#    Plot the predicted colorized image using the provided model and input tensors.
-
-#    Args:
-#        model (torch.nn.Module): The PyTorch model used for colorization.
-#        img (Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]): A tuple containing the following tensors:
-#            - RGB image tensor: Size([3, H, W])
-#            - L channel tensor: Size([1, H, W])
-#            - A channel tensor: Size([H, W])
-#            - B channel tensor: Size([H, W])
-#            - AB channels tensor: Size([2, H, W])
-#        device (str, optional): The device to use for computations. Default is "cuda".
-#    """
-#    l_channel = img[1].to(device)
-#    rgb = img[0].to(device)
-
-#    with torch.no_grad():
-#        ab_pred = model(l_channel)
-
-#    plot_l(l_channel.detach().cpu())
-#    plot_rgb(rgb.detach().cpu())
-#    reconstruct_lab(l_channel.detach().cpu(), ab_pred.detach().cpu())
 
 def reconstruct_lab(l_channel: torch.Tensor, ab_channels: Tuple[torch.Tensor, torch.Tensor]):
     """
@@ -152,7 +134,32 @@ def reconstruct_lab(l_channel: torch.Tensor, ab_channels: Tuple[torch.Tensor, to
     plt.axis('off')
     plt.show()
     
-def plot_model_pred(l, model, device):
+def plot_model_pred(l: torch.Tensor, model: torch.nn.Module, device: str = "cuda"):
+    """
+    Plot the predicted colorized image using the provided model and L channel tensor.
+
+    Args:
+        l (torch.Tensor): Tensor containing the L channel values. Size 1xHxW.
+        model (torch.nn.Module): The PyTorch model used for colorization.
+        device (str, optional): The device to use for computations. Defaults to "cuda".
+    """
     input = l.to(device).unsqueeze(0)
     ab_pred = model(input).squeeze(0)
     reconstruct_lab(l, ab_pred.detach().cpu())
+    
+def plot_losses(train_losses: List[float], test_losses: List[float]):
+    """
+    Plot the training and test losses over epochs.
+
+    Args:
+        train_losses (List[float]): List containing the training losses for each epoch.
+        test_losses (List[float]): List containing the test losses for each epoch.
+    """
+    plt.figure(figsize=(10, 6))
+    plt.plot(train_losses, label='Train')
+    plt.plot(test_losses, label='Test')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid(linestyle = "--")
+    plt.legend()
+    plt.show()
