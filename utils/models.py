@@ -10,6 +10,89 @@ import torch
 import torch.nn as nn
 from pathlib import Path
 
+class CNN(nn.Module):
+    """
+    A deep Convolutional Neural Network (CNN) model.
+
+    This model consists of nine of convolutional layers, batch normalization,
+    and ReLU activations followed by two fully connected layers. The final output
+    is reshaped to the expected dimensions.
+
+    Attributes:
+        height (int): Height of the input image.
+        width (int): Width of the input image.
+        features (nn.Sequential): Sequential container of convolutional layers, batch normalization,
+                                  and ReLU activations.
+        flatten (nn.Flatten): Layer to flatten the output of the convolutional layers.
+        fc1 (nn.Linear): First fully connected layer.
+        fc2 (nn.Linear): Second fully connected layer that outputs the final prediction.
+
+    Methods:
+        forward(x: torch.Tensor) -> torch.Tensor:
+            Defines the forward pass of the model.
+    """
+
+    def __init__(self, height: int, width: int):
+        """
+        Initializes the CNN model with specified height and width of the input image.
+
+        Args:
+            height (int): Height of the input image.
+            width (int): Width of the input image.
+        """
+        super().__init__()
+        self.height = height
+        self.width = width
+        self.conv = nn.Sequential(
+            nn.Conv2d(1, 4, kernel_size=3, stride=2, padding=2),  # Conv1
+            nn.BatchNorm2d(4),
+            nn.ReLU(),
+            nn.Conv2d(4, 8, kernel_size=3, stride=2, padding=2),  # Conv2
+            nn.BatchNorm2d(8),
+            nn.ReLU(),
+            nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=2),  # Conv3
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=2),  # Conv4
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=2),  # Conv5
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=2),  # Conv6
+            nn.ReLU(),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(128, 32, kernel_size=3, stride=2, padding=2),  # Conv7
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 8, kernel_size=3, stride=2, padding=2),  # Conv8
+            nn.BatchNorm2d(8),
+            nn.ReLU(),
+            nn.Conv2d(8, 1, kernel_size=3, stride=2, padding=2),  # Conv9
+            nn.BatchNorm2d(1),
+            nn.ReLU(),
+        )
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(9, 64)
+        self.fc2 = nn.Linear(64, 2 * self.height * self.width)  # adjust accordingly
+
+    def forward(self, x: torch.Tensor):
+        """
+        Defines the forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input image tensor of shape (batch_size, 1, height, width).
+
+        Returns:
+            torch.Tensor: Output tensor reshaped to (batch_size, 2, height, width).
+        """
+        x = self.conv(x)
+        x = self.flatten(x)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = x.view(-1, 2, self.height, self.width)
+        return x
+
 class BaselineCNN(nn.Module):
     """
     A baseline CNN for image colorization. Used privately to test functions and other internal things before scaling things up.
@@ -48,7 +131,7 @@ class BaselineCNN(nn.Module):
         )
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         """
         Defines the forward pass of the model.
 
