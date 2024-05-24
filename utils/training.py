@@ -235,7 +235,6 @@ def _save_losses_gan(d_losses: List[float], g_losses: List[float], file_name: st
 #### EXTRA ####
 ###############
 
-
 def load_losses(file_path: str):
     """
     Load training and validation losses from a file into NumPy arrays.
