@@ -8,6 +8,7 @@ Authors: Diego Cerretti, Beatrice Citterio, Mattia Martino, Sandro Mikautadze
 
 import torch
 import torch.nn as nn
+from torch.nn.functional import leaky_relu
 from pathlib import Path
 from typing import Optional
 
@@ -147,6 +148,89 @@ class BaselineCNN(nn.Module):
         x = self.layers(x)
         x = self.sigmoid(x)
         return x
+    
+class UNet(nn.Module):
+    def __init__(self):
+        super(UNet, self).__init__()
+        self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
+        self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.maxpool1 = nn.MaxPool2d(2, stride=2)
+
+        self.conv4 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv5 = nn.Conv2d(128, 128, 3, padding=1)
+        self.maxpool2 = nn.MaxPool2d(2, stride=2)
+
+        self.conv7 = nn.Conv2d(128, 256, 3, padding=1)
+        self.conv8 = nn.Conv2d(256, 256, 3, padding=1)
+        self.maxpool3 = nn.MaxPool2d(2, stride=2)
+
+        self.conv10 = nn.Conv2d(256, 512, 3, padding=1)
+        self.conv11 = nn.Conv2d(512, 512, 3, padding=1)
+        self.maxpool4 = nn.MaxPool2d(2, stride=2)
+
+        self.conv13 = nn.Conv2d(512, 1024, 3, padding=1)
+        self.conv14 = nn.Conv2d(1024, 1024, 3, padding=1)
+        self.up1 = nn.ConvTranspose2d(1024, 512, 3, stride=2, padding=1, output_padding=1)
+
+        self.conv16 = nn.Conv2d(1024, 512, 3, padding=1)
+        self.conv17 = nn.Conv2d(512, 512, 3, padding=1)
+        self.up2 = nn.ConvTranspose2d(512, 256, 3, stride=2, padding=1, output_padding=1)
+
+        self.conv19 = nn.Conv2d(512, 256, 3, padding=1)
+        self.conv20 = nn.Conv2d(256, 256, 3, padding=1)
+        self.up3 = nn.ConvTranspose2d(256, 128, 3, stride=2, padding=1, output_padding=1)
+
+        self.conv22 = nn.Conv2d(256, 128, 3, padding=1)
+        self.conv23 = nn.Conv2d(128, 128, 3, padding=1)
+        self.up4 = nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1)
+
+        self.conv25 = nn.Conv2d(128, 64, 3, padding=1)
+        self.conv26 = nn.Conv2d(64, 64, 3, padding=1)
+        self.output = nn.Conv2d(64, 2, 1, padding=0)
+
+    def forward(self, x):
+        x1 = leaky_relu(self.conv1(x), negative_slope=0.2)
+        x1 = leaky_relu(self.conv2(x1), negative_slope=0.2)
+        x = self.maxpool1(x1)
+
+        x2 = leaky_relu(self.conv4(x), negative_slope=0.2)
+        x2 = leaky_relu(self.conv5(x2), negative_slope=0.2)
+        x = self.maxpool2(x2)
+
+        x3 = leaky_relu(self.conv7(x), negative_slope=0.2)
+        x3 = leaky_relu(self.conv8(x3), negative_slope=0.2)
+        x = self.maxpool3(x3)
+
+        x4 = leaky_relu(self.conv10(x), negative_slope=0.2)
+        x4 = leaky_relu(self.conv11(x4), negative_slope=0.2)
+        x = self.maxpool4(x4)
+
+        x = leaky_relu(self.conv13(x), negative_slope=0.2)
+        x = leaky_relu(self.conv14(x), negative_slope=0.2)
+        x = self.up1(x)
+
+        x = torch.cat([x4, x], dim=1)
+        x = leaky_relu(self.conv16(x), negative_slope=0.2)
+        x = leaky_relu(self.conv17(x), negative_slope=0.2)
+        x = self.up2(x)
+
+        x = torch.cat([x3, x], dim=1)
+        x = leaky_relu(self.conv19(x), negative_slope=0.2)
+        x = leaky_relu(self.conv20(x), negative_slope=0.2)
+        x = self.up3(x)
+
+        x = torch.cat([x2, x], dim=1)
+        x = leaky_relu(self.conv22(x), negative_slope=0.2)
+        x = leaky_relu(self.conv23(x), negative_slope=0.2)
+        x = self.up4(x)
+
+        x = torch.cat([x1, x], dim=1)
+        x = leaky_relu(self.conv25(x), negative_slope=0.2)
+        x = leaky_relu(self.conv26(x), negative_slope=0.2)
+        x = self.output(x)
+
+        return torch.sigmoid(x)
+
 
 def save_model(model: torch.nn.Module, model_name: str, model_dir: Optional[str] = "models"):
     """
@@ -181,3 +265,4 @@ def load_model(model: torch.nn.Module, model_path: str):
    model.load_state_dict(torch.load(model_path))
    print(f"{model._get_name()} model loaded successfully!")
    return model
+
