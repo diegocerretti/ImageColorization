@@ -10,6 +10,7 @@ Authors: Diego Cerretti, Beatrice Citterio, Mattia Martino, Sandro Mikautadze
 import torch
 
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 from tqdm import tqdm
 from utils.models import save_model
 import os
@@ -116,12 +117,14 @@ def _save_losses_cnn(train_losses: List[float], test_losses: List[float], file_n
 ### GAN ###
 ###########
 
-def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.Module, disc_opt: torch.optim.Optimizer,
-              gen_opt: torch.optim.Optimizer, criterion: torch.nn.modules.loss._Loss, train_loader: DataLoader,
-              device: Optional[str] = "cuda", save_losses: Optional[bool] = False,
-              save_checkpoints: Optional[bool] = False, file_name: Optional[str] = ""):
+def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.Module,
+                                     disc_opt: torch.optim.Optimizer, gen_opt: torch.optim.Optimizer,
+                                     criterion: torch.nn.modules.loss._Loss, train_loader: DataLoader,
+                                     device: Optional[str] = "cuda", l1_lambda: float = 0.0,
+                                     save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False,
+                                     file_name: Optional[str] = ""):
     """
-    Function to train the GAN model for image colorization.
+    Function to train the GAN model with optional L1 regularization for image colorization.
 
     Args:
         epochs (int): Number of training epochs.
@@ -129,9 +132,10 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
         generator (torch.nn.Module): Generator model.
         disc_opt (torch.optim.Optimizer): Optimizer for the discriminator.
         gen_opt (torch.optim.Optimizer): Optimizer for the generator.
-        criterion (torch.nn.modules.loss._Loss): Loss function.
+        criterion (torch.nn.modules.loss._Loss): Loss function (e.g., BCELoss).
         train_loader (torch.utils.data.dataloader.DataLoader): DataLoader for the training data.
         device (Optional[str]): Device to use for training (e.g., "cuda" or "cpu"). Default is "cuda".
+        l1_lambda (float): Weight for the L1 loss component. Default is 0.0 (no regularization).
         save_losses (Optional[bool]): Whether to save the training losses to a file. Default is False.
         save_checkpoints (Optional[bool]): Whether to save the generator checkpoints during training. Default is False.
         file_name (Optional[str]): Base name for saving model checkpoints and losses file. Default is an empty string.
@@ -178,7 +182,12 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             # Train Generator
             gen_opt.zero_grad()
             pred_fake_gen = discriminator(fake_lab)
-            g_loss = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen))
+            g_loss_adv = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen))
+            if l1_lambda > 0.0:
+                g_loss_l1 = F.l1_loss(fake_ab, ab)  # L1 loss component
+                g_loss = g_loss_adv + l1_lambda * g_loss_l1  # Combined GAN loss with L1 regularization
+            else:
+                g_loss = g_loss_adv  # Standard GAN loss
             g_loss.backward()
             gen_opt.step()
             epoch_g_loss += g_loss.item()
@@ -190,7 +199,6 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
                 # save three checkpoints
                 save_model(generator, f"{file_name}_{epoch + 1}")
 
-
         d_losses.append(epoch_d_loss / len(train_loader))
         g_losses.append(epoch_g_loss / len(train_loader))
 
@@ -199,6 +207,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
 
     print('Finished Training')
     return d_losses, g_losses
+
 
 def _save_losses_gan(d_losses: List[float], g_losses: List[float], file_name: str, save_dir: str = "losses"):
     """
