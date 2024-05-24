@@ -185,10 +185,10 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
 
             loop.set_postfix(d_loss=epoch_d_loss / (loop.n + 1), g_loss=epoch_g_loss / (loop.n + 1))
             
-            if save_checkpoints and (epochs > 10):
-                if epoch in [int(epochs / 3) - 1, 2 * int(epochs / 3) - 1, epochs - 1]:
-                    # save three checkpoints
-                    save_model(generator, f"{file_name}_{epoch + 1}")
+        if save_checkpoints and (epochs > 10):
+            if epoch in [int(epochs / 3) - 1, 2 * int(epochs / 3) - 1, epochs - 1]:
+                # save three checkpoints
+                save_model(generator, f"{file_name}_{epoch + 1}")
 
 
         d_losses.append(epoch_d_loss / len(train_loader))
