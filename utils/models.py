@@ -8,7 +8,7 @@ Authors: Diego Cerretti, Beatrice Citterio, Mattia Martino, Sandro Mikautadze
 
 import torch
 import torch.nn as nn
-from torch.nn.functional import leaky_relu
+import torch.nn.functional as F
 from pathlib import Path
 from typing import Optional
 
@@ -105,7 +105,7 @@ class UNet(nn.Module):
     that enables precise localization. It uses convolutional layers with Leaky ReLU activations and skip connections 
     to combine high-resolution features from the contracting path with the upsampled output.
 
-    Attributes:
+    Attributes: DA CAMBIARE
         conv1 (nn.Conv2d): First convolutional layer in the encoder.
         conv2 (nn.Conv2d): Second convolutional layer in the encoder.
         maxpool1 (nn.MaxPool2d): Max pooling layer after conv2.
@@ -138,99 +138,59 @@ class UNet(nn.Module):
         forward(x: torch.Tensor) -> torch.Tensor:
             Defines the forward pass of the model.
     """
-
     def __init__(self):
         """
-        Initializes the U-Net model.
+        Initializes each part of the convolutional neural network.
         """
-        super(UNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 64, 3, padding=1)
-        self.conv2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.maxpool1 = nn.MaxPool2d(2, stride=2)
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=4, stride=2, padding=1)
+        self.conv1_bn = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1)
+        self.conv2_bn = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1)
+        self.conv3_bn = nn.BatchNorm2d(128)
+        self.conv4 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1)
+        self.conv4_bn = nn.BatchNorm2d(256)
 
-        self.conv4 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv5 = nn.Conv2d(128, 128, 3, padding=1)
-        self.maxpool2 = nn.MaxPool2d(2, stride=2)
+        self.conv5 = nn.Conv2d(256, 256, kernel_size=4, stride=1, padding=3, dilation=2)
+        self.conv5_bn = nn.BatchNorm2d(256)
 
-        self.conv7 = nn.Conv2d(128, 256, 3, padding=1)
-        self.conv8 = nn.Conv2d(256, 256, 3, padding=1)
-        self.maxpool3 = nn.MaxPool2d(2, stride=2)
+        self.t_conv1 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1)
+        self.t_conv1_bn = nn.BatchNorm2d(128)
+        self.t_conv2 = nn.ConvTranspose2d(256, 64, kernel_size=4, stride=2, padding=1)
+        self.t_conv2_bn = nn.BatchNorm2d(64)
+        self.t_conv3 = nn.ConvTranspose2d(128, 32, kernel_size=4, stride=2, padding=1)
+        self.t_conv3_bn = nn.BatchNorm2d(32)
+        self.t_conv4 = nn.ConvTranspose2d(64, 2, kernel_size=4, stride=2, padding=1)
 
-        self.conv10 = nn.Conv2d(256, 512, 3, padding=1)
-        self.conv11 = nn.Conv2d(512, 512, 3, padding=1)
-        self.maxpool4 = nn.MaxPool2d(2, stride=2)
-
-        self.conv13 = nn.Conv2d(512, 1024, 3, padding=1)
-        self.conv14 = nn.Conv2d(1024, 1024, 3, padding=1)
-        self.up1 = nn.ConvTranspose2d(1024, 512, 3, stride=2, padding=1, output_padding=1)
-
-        self.conv16 = nn.Conv2d(1024, 512, 3, padding=1)
-        self.conv17 = nn.Conv2d(512, 512, 3, padding=1)
-        self.up2 = nn.ConvTranspose2d(512, 256, 3, stride=2, padding=1, output_padding=1)
-
-        self.conv19 = nn.Conv2d(512, 256, 3, padding=1)
-        self.conv20 = nn.Conv2d(256, 256, 3, padding=1)
-        self.up3 = nn.ConvTranspose2d(256, 128, 3, stride=2, padding=1, output_padding=1)
-
-        self.conv22 = nn.Conv2d(256, 128, 3, padding=1)
-        self.conv23 = nn.Conv2d(128, 128, 3, padding=1)
-        self.up4 = nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1)
-
-        self.conv25 = nn.Conv2d(128, 64, 3, padding=1)
-        self.conv26 = nn.Conv2d(64, 64, 3, padding=1)
-        self.output = nn.Conv2d(64, 2, 1, padding=0)
+        self.output = nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         """
-        Defines the forward pass of the model.
-
-        Args:
-            x (torch.Tensor): Input image tensor of shape (batch_size, 1, height, width).
-
-        Returns:
-            torch.Tensor: Output tensor of shape (batch_size, 2, height, width).
+        Implements the forward pass for the given data `x`.
+        :param x: The input data.
+        :return: The neural network output.
         """
-        x1 = leaky_relu(self.conv1(x), negative_slope=0.2)
-        x1 = leaky_relu(self.conv2(x1), negative_slope=0.2)
-        x = self.maxpool1(x1)
+        x_1 = F.relu(self.conv1_bn(self.conv1(x)))
+        x_2 = F.relu(self.conv2_bn(self.conv2(x_1)))
+        x_3 = F.relu(self.conv3_bn(self.conv3(x_2)))
+        x_4 = F.relu(self.conv4_bn(self.conv4(x_3)))
 
-        x2 = leaky_relu(self.conv4(x), negative_slope=0.2)
-        x2 = leaky_relu(self.conv5(x2), negative_slope=0.2)
-        x = self.maxpool2(x2)
 
-        x3 = leaky_relu(self.conv7(x), negative_slope=0.2)
-        x3 = leaky_relu(self.conv8(x3), negative_slope=0.2)
-        x = self.maxpool3(x3)
+        x_5 = F.relu(self.conv5_bn(self.conv5(x_4)))
 
-        x4 = leaky_relu(self.conv10(x), negative_slope=0.2)
-        x4 = leaky_relu(self.conv11(x4), negative_slope=0.2)
-        x = self.maxpool4(x4)
-
-        x = leaky_relu(self.conv13(x), negative_slope=0.2)
-        x = leaky_relu(self.conv14(x), negative_slope=0.2)
-        x = self.up1(x)
-
-        x = torch.cat([x4, x], dim=1)
-        x = leaky_relu(self.conv16(x), negative_slope=0.2)
-        x = leaky_relu(self.conv17(x), negative_slope=0.2)
-        x = self.up2(x)
-
-        x = torch.cat([x3, x], dim=1)
-        x = leaky_relu(self.conv19(x), negative_slope=0.2)
-        x = leaky_relu(self.conv20(x), negative_slope=0.2)
-        x = self.up3(x)
-
-        x = torch.cat([x2, x], dim=1)
-        x = leaky_relu(self.conv22(x), negative_slope=0.2)
-        x = leaky_relu(self.conv23(x), negative_slope=0.2)
-        x = self.up4(x)
-
-        x = torch.cat([x1, x], dim=1)
-        x = leaky_relu(self.conv25(x), negative_slope=0.2)
-        x = leaky_relu(self.conv26(x), negative_slope=0.2)
-        x = self.output(x)
-
-        return torch.sigmoid(x)
+        x_6 = F.relu(self.t_conv1_bn(self.t_conv1(x_5)))
+        x_6 = torch.cat((x_6, x_3), 1)
+        x_7 = F.relu(self.t_conv2_bn(self.t_conv2(x_6)))
+        x_7 = torch.cat((x_7, x_2), 1)
+        x_8 = F.relu(self.t_conv3_bn(self.t_conv3(x_7)))
+        x_8 = torch.cat((x_8, x_1), 1)
+        x_9 = F.relu(self.t_conv4(x_8))
+        x_9 = torch.cat((x_9, x), 1)
+        x = self.output(x_9)
+        x = self.sigmoid(x)
+        return x
 
 class BaselineCNN(nn.Module):
     """
