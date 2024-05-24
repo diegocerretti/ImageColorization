@@ -117,11 +117,10 @@ def _save_losses_cnn(train_losses: List[float], test_losses: List[float], file_n
 ###########
 
 def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.Module,
-                                     disc_opt: torch.optim.Optimizer, gen_opt: torch.optim.Optimizer,
-                                     criterion: torch.nn.modules.loss._Loss, train_loader: DataLoader,
-                                     device: Optional[str] = "cuda", l1_lambda: float = 0.0,
-                                     save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False,
-                                     file_name: Optional[str] = ""):
+              disc_opt: torch.optim.Optimizer, gen_opt: torch.optim.Optimizer,
+              criterion: torch.nn.modules.loss._Loss, train_loader: DataLoader,
+              device: Optional[str] = "cuda", l1_lambda: float = 0.0, label_smoothing: Optional[bool] = False,
+              save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False, file_name: Optional[str] = ""):
     """
     Function to train the GAN model with optional L1 regularization for image colorization.
 
@@ -135,6 +134,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
         train_loader (torch.utils.data.dataloader.DataLoader): DataLoader for the training data.
         device (Optional[str]): Device to use for training (e.g., "cuda" or "cpu"). Default is "cuda".
         l1_lambda (float): Weight for the L1 loss component. Default is 0.0 (no regularization).
+        label_smoothing (Optional[bool]): Applies label smoothing to true labels to reduce overconfidence. Smoothing value is in [0.9, 0.95].
         save_losses (Optional[bool]): Whether to save the training losses to a file. Default is False.
         save_checkpoints (Optional[bool]): Whether to save the generator checkpoints during training. Default is False.
         file_name (Optional[str]): Base name for saving model checkpoints and losses file. Default is an empty string.
@@ -168,10 +168,16 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             real_lab = torch.cat((l, ab), dim=1)
 
             pred_fake = discriminator(fake_lab)
-            loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
-
             pred_real = discriminator(real_lab)
-            loss_real = criterion(pred_real, torch.ones_like(pred_real))
+            
+            if label_smoothing:
+                # Apply label smoothing only to real labels
+                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.90  # Smooth real labels between 0.85 and 0.9
+                loss_real = criterion(pred_real, smooth_real_labels)
+                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
+            else:
+                loss_real = criterion(pred_real, torch.ones_like(pred_real))
+                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
 
             d_loss = (loss_fake + loss_real) / 2
             d_loss.backward()
