@@ -172,7 +172,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             
             if label_smoothing:
                 # Apply label smoothing only to real labels
-                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.90  # Smooth real labels between 0.85 and 0.9
+                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.90  # Smooth real labels between 0.9 and 0.95
                 loss_real = criterion(pred_real, smooth_real_labels)
                 loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
             else:
