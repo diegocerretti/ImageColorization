@@ -26,7 +26,7 @@ def train_cnn(epochs: int, model: torch.nn.Module, criterion: torch.nn.modules.l
               device: Optional[str] = "cuda",
               save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False, file_name: Optional[str] = ""):
     """
-    Function to train the CNN model for image colorization.
+    Function to train the CNN model for image colorization. It also works for the UNet training.
 
     Args:
         epochs (int): Number of training epochs.
