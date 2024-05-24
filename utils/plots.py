@@ -147,17 +147,20 @@ def plot_model_pred(l: torch.Tensor, model: torch.nn.Module, device: Optional[st
     ab_pred = model(input).squeeze(0)
     reconstruct_lab(l, ab_pred.detach().cpu())
     
-def plot_losses(train_losses: List[float], test_losses: List[float]):
+def plot_losses(loss1: List[float], loss2: List[float],
+                label1: Optional[str] = "Train", label2: Optional[str] = "Test"):
     """
     Plot the training and test losses over epochs.
 
     Args:
-        train_losses (List[float]): List containing the training losses for each epoch.
-        test_losses (List[float]): List containing the test losses for each epoch.
+        train_losses (List[float]): List containing the first losses (e.g. train) for each epoch.
+        test_losses (List[float]): List containing the second losses (e.g. test) for each epoch.
+        label1 (Optional[str]): label to put on the first loss. Defaults to "Train".
+        label2 (Optional[str]): label to put on the second loss. Defaults to "Test".
     """
     plt.figure(figsize=(10, 6))
-    plt.plot(train_losses, label='Train')
-    plt.plot(test_losses, label='Test')
+    plt.plot(loss1, label=label1)
+    plt.plot(loss2, label=label2)
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.grid(linestyle = "--")
