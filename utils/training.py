@@ -116,7 +116,7 @@ def _save_losses_cnn(train_losses: List[float], test_losses: List[float], file_n
 ### GAN ###
 ###########
 
-def wgan_loss(discriminator: torch.nn.Module, real: torch.Tensor, fake: torch.Tensor):
+def _wgan_loss(discriminator: torch.nn.Module, real: torch.Tensor, fake: torch.Tensor):
     """
     Computes the WGAN loss for the discriminator and generator.
 
@@ -136,7 +136,7 @@ def wgan_loss(discriminator: torch.nn.Module, real: torch.Tensor, fake: torch.Te
 
     return d_loss, g_loss
 
-def compute_gradient_penalty(discriminator: torch.nn.Module, real_samples: torch.Tensor,
+def _compute_gradient_penalty(discriminator: torch.nn.Module, real_samples: torch.Tensor,
                              fake_samples: torch.Tensor, device: Optional[str] = "cuda"):
     """
     Computes the gradient penalty for the WGAN-GP.
@@ -252,8 +252,8 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             #     loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
             # d_loss = (loss_fake + loss_real) / 2
             
-            d_loss, _ = wgan_loss(discriminator, real_lab, fake_lab.detach())
-            gradient_penalty = compute_gradient_penalty(discriminator, real_lab, fake_lab, device)
+            d_loss, _ = _wgan_loss(discriminator, real_lab, fake_lab.detach())
+            gradient_penalty = _compute_gradient_penalty(discriminator, real_lab, fake_lab, device)
             d_loss = d_loss + lambda_gp * gradient_penalty
             d_loss.backward()
             disc_opt.step()
@@ -263,7 +263,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             gen_opt.zero_grad()
             # pred_fake_gen = discriminator(fake_lab)
             # g_loss_adv = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen))
-            _, g_loss = wgan_loss(discriminator, real_lab.detach(), fake_lab)
+            _, g_loss = _wgan_loss(discriminator, real_lab.detach(), fake_lab)
             if l1_lambda > 0.0:
                 g_loss_l1 = F.l1_loss(fake_ab, ab)  # L1 loss component
                 g_loss = g_loss + l1_lambda * g_loss_l1  # Combined WGAN loss with L1 regularization
