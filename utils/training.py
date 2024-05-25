@@ -134,7 +134,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
         train_loader (torch.utils.data.dataloader.DataLoader): DataLoader for the training data.
         device (Optional[str]): Device to use for training (e.g., "cuda" or "cpu"). Default is "cuda".
         l1_lambda (float): Weight for the L1 loss component. Default is 0.0 (no regularization).
-        label_smoothing (Optional[bool]): Applies label smoothing to true labels to reduce overconfidence. Smoothing value is in [0.9, 0.95].
+        label_smoothing (Optional[bool]): Applies label smoothing to true labels to reduce overconfidence. Smoothing value is in [0.95, 1].
         save_losses (Optional[bool]): Whether to save the training losses to a file. Default is False.
         save_checkpoints (Optional[bool]): Whether to save the generator checkpoints during training. Default is False.
         file_name (Optional[str]): Base name for saving model checkpoints and losses file. Default is an empty string.
@@ -172,7 +172,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             
             if label_smoothing:
                 # Apply label smoothing only to real labels
-                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.90  # Smooth real labels between 0.9 and 0.95
+                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.95  # Smooth real labels between 0.95 and 1
                 loss_real = criterion(pred_real, smooth_real_labels)
                 loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
             else:
