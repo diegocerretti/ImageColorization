@@ -99,40 +99,33 @@ class CNN(nn.Module):
     
 class UNet(nn.Module):
     """
-    A U-Net model for image segmentation tasks.
+    A U-Net model for image colorization tasks.
 
     This model consists of a contracting path (encoder) to capture context and a symmetric expanding path (decoder) 
-    that enables precise localization. It uses convolutional layers with Leaky ReLU activations and skip connections 
+    that enables precise localization. It uses convolutional layers with ReLU activations and skip connections 
     to combine high-resolution features from the contracting path with the upsampled output.
 
-    Attributes: DA CAMBIARE
+    Attributes:
         conv1 (nn.Conv2d): First convolutional layer in the encoder.
+        bn1 (nn.BatchNorm2d): Batch normalization layer for conv1.
         conv2 (nn.Conv2d): Second convolutional layer in the encoder.
-        maxpool1 (nn.MaxPool2d): Max pooling layer after conv2.
-        conv4 (nn.Conv2d): Third convolutional layer in the encoder.
-        conv5 (nn.Conv2d): Fourth convolutional layer in the encoder.
-        maxpool2 (nn.MaxPool2d): Max pooling layer after conv5.
-        conv7 (nn.Conv2d): Fifth convolutional layer in the encoder.
-        conv8 (nn.Conv2d): Sixth convolutional layer in the encoder.
-        maxpool3 (nn.MaxPool2d): Max pooling layer after conv8.
-        conv10 (nn.Conv2d): Seventh convolutional layer in the encoder.
-        conv11 (nn.Conv2d): Eighth convolutional layer in the encoder.
-        maxpool4 (nn.MaxPool2d): Max pooling layer after conv11.
-        conv13 (nn.Conv2d): First convolutional layer in the bottleneck.
-        conv14 (nn.Conv2d): Second convolutional layer in the bottleneck.
-        up1 (nn.ConvTranspose2d): First upsampling layer in the decoder.
-        conv16 (nn.Conv2d): Ninth convolutional layer in the decoder.
-        conv17 (nn.Conv2d): Tenth convolutional layer in the decoder.
-        up2 (nn.ConvTranspose2d): Second upsampling layer in the decoder.
-        conv19 (nn.Conv2d): Eleventh convolutional layer in the decoder.
-        conv20 (nn.Conv2d): Twelfth convolutional layer in the decoder.
-        up3 (nn.ConvTranspose2d): Third upsampling layer in the decoder.
-        conv22 (nn.Conv2d): Thirteenth convolutional layer in the decoder.
-        conv23 (nn.Conv2d): Fourteenth convolutional layer in the decoder.
-        up4 (nn.ConvTranspose2d): Fourth upsampling layer in the decoder.
-        conv25 (nn.Conv2d): Fifteenth convolutional layer in the decoder.
-        conv26 (nn.Conv2d): Sixteenth convolutional layer in the decoder.
-        output (nn.Conv2d): Output convolutional layer that produces the final segmentation map.
+        bn2 (nn.BatchNorm2d): Batch normalization layer for conv2.
+        conv3 (nn.Conv2d): Third convolutional layer in the encoder.
+        bn3 (nn.BatchNorm2d): Batch normalization layer for conv3.
+        conv4 (nn.Conv2d): Fourth convolutional layer in the encoder.
+        bn4 (nn.BatchNorm2d): Batch normalization layer for conv4.
+        conv5 (nn.Conv2d): Fifth convolutional layer in the bottleneck with dilation rate 2.
+        bn5 (nn.BatchNorm2d): Batch normalization layer for conv5.
+        t_conv1 (nn.ConvTranspose2d): First transposed convolutional layer in the decoder.
+        t_bn1 (nn.BatchNorm2d): Batch normalization layer for t_conv1.
+        t_conv2 (nn.ConvTranspose2d): Second transposed convolutional layer in the decoder.
+        t_bn2 (nn.BatchNorm2d): Batch normalization layer for t_conv2.
+        t_conv3 (nn.ConvTranspose2d): Third transposed convolutional layer in the decoder.
+        t_bn3 (nn.BatchNorm2d): Batch normalization layer for t_conv3.
+        t_conv4 (nn.ConvTranspose2d): Fourth transposed convolutional layer in the decoder.
+        output (nn.Conv2d): Output convolutional layer with 2 output channels.
+        sigmoid (nn.Sigmoid): Sigmoid activation function for the output.
+
 
     Methods:
         forward(x: torch.Tensor) -> torch.Tensor:
@@ -144,23 +137,23 @@ class UNet(nn.Module):
         """
         super().__init__()
         self.conv1 = nn.Conv2d(1, 32, kernel_size=4, stride=2, padding=1)
-        self.conv1_bn = nn.BatchNorm2d(32)
+        self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1)
-        self.conv2_bn = nn.BatchNorm2d(64)
+        self.bn2 = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1)
-        self.conv3_bn = nn.BatchNorm2d(128)
+        self.bn3 = nn.BatchNorm2d(128)
         self.conv4 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1)
-        self.conv4_bn = nn.BatchNorm2d(256)
+        self.bn4 = nn.BatchNorm2d(256)
 
         self.conv5 = nn.Conv2d(256, 256, kernel_size=4, stride=1, padding=3, dilation=2)
-        self.conv5_bn = nn.BatchNorm2d(256)
+        self.bn5 = nn.BatchNorm2d(256)
 
         self.t_conv1 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1)
-        self.t_conv1_bn = nn.BatchNorm2d(128)
+        self.t_bn1 = nn.BatchNorm2d(128)
         self.t_conv2 = nn.ConvTranspose2d(256, 64, kernel_size=4, stride=2, padding=1)
-        self.t_conv2_bn = nn.BatchNorm2d(64)
+        self.t_bn2 = nn.BatchNorm2d(64)
         self.t_conv3 = nn.ConvTranspose2d(128, 32, kernel_size=4, stride=2, padding=1)
-        self.t_conv3_bn = nn.BatchNorm2d(32)
+        self.t_bn3 = nn.BatchNorm2d(32)
         self.t_conv4 = nn.ConvTranspose2d(64, 2, kernel_size=4, stride=2, padding=1)
 
         self.output = nn.Conv2d(3, 2, kernel_size=3, stride=1, padding=1)
@@ -172,19 +165,19 @@ class UNet(nn.Module):
         :param x: The input data.
         :return: The neural network output.
         """
-        x_1 = F.relu(self.conv1_bn(self.conv1(x)))
-        x_2 = F.relu(self.conv2_bn(self.conv2(x_1)))
-        x_3 = F.relu(self.conv3_bn(self.conv3(x_2)))
-        x_4 = F.relu(self.conv4_bn(self.conv4(x_3)))
+        x_1 = F.relu(self.bn1(self.conv1(x)))
+        x_2 = F.relu(self.bn2(self.conv2(x_1)))
+        x_3 = F.relu(self.bn3(self.conv3(x_2)))
+        x_4 = F.relu(self.bn4(self.conv4(x_3)))
 
 
-        x_5 = F.relu(self.conv5_bn(self.conv5(x_4)))
+        x_5 = F.relu(self.bn5(self.conv5(x_4)))
 
-        x_6 = F.relu(self.t_conv1_bn(self.t_conv1(x_5)))
+        x_6 = F.relu(self.t_bn1(self.t_conv1(x_5)))
         x_6 = torch.cat((x_6, x_3), 1)
-        x_7 = F.relu(self.t_conv2_bn(self.t_conv2(x_6)))
+        x_7 = F.relu(self.t_bn2(self.t_conv2(x_6)))
         x_7 = torch.cat((x_7, x_2), 1)
-        x_8 = F.relu(self.t_conv3_bn(self.t_conv3(x_7)))
+        x_8 = F.relu(self.t_bn3(self.t_conv3(x_7)))
         x_8 = torch.cat((x_8, x_1), 1)
         x_9 = F.relu(self.t_conv4(x_8))
         x_9 = torch.cat((x_9, x), 1)
