@@ -116,56 +116,6 @@ def _save_losses_cnn(train_losses: List[float], test_losses: List[float], file_n
 ### GAN ###
 ###########
 
-def _wgan_loss(discriminator: torch.nn.Module, real: torch.Tensor, fake: torch.Tensor):
-    """
-    Computes the WGAN loss for the discriminator and generator.
-
-    Args:
-        discriminator (nn.Module): The discriminator model.
-        real (torch.Tensor): Real data tensor.
-        fake (torch.Tensor): Generated (fake) data tensor.
-
-    Returns:
-        tuple: A tuple containing the discriminator loss and generator loss.
-    """
-    d_loss_real = -torch.mean(discriminator(real))
-    d_loss_fake = torch.mean(discriminator(fake))
-    d_loss = d_loss_real + d_loss_fake
-
-    g_loss = -torch.mean(discriminator(fake))
-
-    return d_loss, g_loss
-
-def _compute_gradient_penalty(discriminator: torch.nn.Module, real_samples: torch.Tensor,
-                             fake_samples: torch.Tensor, device: Optional[str] = "cuda"):
-    """
-    Computes the gradient penalty for the WGAN-GP.
-
-    Args:
-        discriminator (nn.Module): The discriminator model.
-        real_samples (torch.Tensor): Real data samples.
-        fake_samples (torch.Tensor): Generated (fake) data samples.
-        device (Optional[str]): Device to use for computations. Default is "cuda".
-
-    Returns:
-        torch.Tensor: The computed gradient penalty.
-    """
-    alpha = torch.rand(real_samples.size(0), 1, 1, 1).to(device)
-    interpolated_samples = alpha * real_samples + (1 - alpha) * fake_samples
-    interpolated_samples.requires_grad_(True)
-
-    disc_interpolated = discriminator(interpolated_samples)
-
-    gradients = torch.autograd.grad(
-        outputs=disc_interpolated, inputs=interpolated_samples,
-        grad_outputs=torch.ones_like(disc_interpolated, device=device),
-        create_graph=True, retain_graph=True, only_inputs=True
-    )[0]
-
-    gradient_penalty = ((gradients.view(gradients.size(0), -1).norm(2, dim=1) - 1) ** 2).mean()
-
-    return gradient_penalty
-
 def _save_losses_gan(d_losses: List[float], g_losses: List[float], file_name: str, save_dir: str = "losses"):
     """
     Save the discriminator and generator losses to a txt file in the specified directory.
@@ -190,12 +140,11 @@ def _save_losses_gan(d_losses: List[float], g_losses: List[float], file_name: st
 
 def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.Module,
               disc_opt: torch.optim.Optimizer, gen_opt: torch.optim.Optimizer,
-              train_loader: DataLoader, device: Optional[str] = "cuda", l1_lambda: float = 0.0, lambda_gp: float = 10.0,
-              n_critic: Optional[int] = 5, save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False,
-              file_name: Optional[str] = ""):
+              criterion: torch.nn.modules.loss._Loss, train_loader: DataLoader,
+              device: Optional[str] = "cuda", l1_lambda: float = 0.0, label_smoothing: Optional[bool] = False,
+              save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False, file_name: Optional[str] = ""):
     """
     Function to train the GAN model with optional L1 regularization for image colorization.
-    Loss is WGAN-GP.
 
     Args:
         epochs (int): Number of training epochs.
@@ -203,11 +152,11 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
         generator (torch.nn.Module): Generator model.
         disc_opt (torch.optim.Optimizer): Optimizer for the discriminator.
         gen_opt (torch.optim.Optimizer): Optimizer for the generator.
+        criterion (torch.nn.modules.loss._Loss): Loss function (e.g., BCELoss).
         train_loader (torch.utils.data.dataloader.DataLoader): DataLoader for the training data.
         device (Optional[str]): Device to use for training (e.g., "cuda" or "cpu"). Default is "cuda".
         l1_lambda (float): Weight for the L1 loss component. Default is 0.0 (no regularization).
-        lambda_gp (float):  Weight for the gradient penalty. Default is 10.0.
-        n_critic (Optional[int]): Number of times to train the discriminator for each generator update. Default is 5.
+        label_smoothing (Optional[bool]): Applies label smoothing to true labels to reduce overconfidence. Smoothing value is in [0.95, 1].
         save_losses (Optional[bool]): Whether to save the training losses to a file. Default is False.
         save_checkpoints (Optional[bool]): Whether to save the generator checkpoints during training. Default is False.
         file_name (Optional[str]): Base name for saving model checkpoints and losses file. Default is an empty string.
@@ -231,37 +180,47 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
 
         loop = tqdm(train_loader, leave=True, desc=f'Epoch {epoch + 1}/{epochs}')
 
-        for i, (_, l, _, _, ab) in enumerate(loop):
+        for _, l, _, _, ab in loop:
             l, ab = l.to(device), ab.to(device)
 
             # Train Discriminator
-            for _ in range(n_critic):
-                disc_opt.zero_grad()
-                fake_ab = generator(l).detach()
-                fake_lab = torch.cat((l, fake_ab), dim=1)
-                real_lab = torch.cat((l, ab), dim=1)
+            disc_opt.zero_grad()
+            fake_ab = generator(l).detach()
+            fake_lab = torch.cat((l, fake_ab), dim=1)
+            real_lab = torch.cat((l, ab), dim=1)
 
-                d_loss, _ = _wgan_loss(discriminator, real_lab, fake_lab)
-                gradient_penalty = _compute_gradient_penalty(discriminator, real_lab, fake_lab, device)
-                d_loss = d_loss + lambda_gp * gradient_penalty
-                d_loss.backward()
-                disc_opt.step()
-                epoch_d_loss += d_loss.item()
+            pred_fake = discriminator(fake_lab)
+            pred_real = discriminator(real_lab)
+            
+            if label_smoothing:
+                # Apply label smoothing only to real labels
+                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.95  # Smooth real labels between 0.95 and 1
+                loss_real = criterion(pred_real, smooth_real_labels)
+                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
+            else:
+                loss_real = criterion(pred_real, torch.ones_like(pred_real))
+                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
+
+            d_loss = (loss_fake + loss_real) / 2
+            d_loss.backward()
+            disc_opt.step()
+            epoch_d_loss += d_loss.item()
 
             # Train Generator
             gen_opt.zero_grad()
-            fake_ab = generator(l)
-            fake_lab = torch.cat((l, fake_ab), dim=1)
-            _, g_loss = _wgan_loss(discriminator, real_lab, fake_lab)
+            pred_fake_gen = discriminator(fake_lab)
+            g_loss_adv = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen))
             if l1_lambda > 0.0:
                 g_loss_l1 = F.l1_loss(fake_ab, ab)  # L1 loss component
-                g_loss = g_loss + l1_lambda * g_loss_l1  # Combined WGAN loss with L1 regularization
+                g_loss = g_loss_adv + l1_lambda * g_loss_l1  # Combined GAN loss with L1 regularization
+            else:
+                g_loss = g_loss_adv  # Standard GAN loss
             g_loss.backward()
             gen_opt.step()
             epoch_g_loss += g_loss.item()
 
-            loop.set_postfix(d_loss=epoch_d_loss / (i + 1), g_loss=epoch_g_loss / (i + 1))
-            
+            loop.set_postfix(d_loss=epoch_d_loss / (loop.n + 1), g_loss=epoch_g_loss / (loop.n + 1))            
+
         if save_checkpoints and (epochs > 10):
             if epoch in [int(epochs / 3) - 1, 2 * int(epochs / 3) - 1, epochs - 1]:
                 # save three checkpoints
