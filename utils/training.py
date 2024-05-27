@@ -184,7 +184,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
 
         loop = tqdm(train_loader, leave=True, desc=f'Epoch {epoch + 1}/{epochs}')
 
-        for batch_idx, (_, l, _, _, ab) in enumerate(loop):
+        for _, l, _, _, ab in loop:
             l, ab = l.to(device), ab.to(device)
 
             # Train Discriminator
@@ -232,12 +232,6 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             epoch_g_loss += g_loss.item()
 
             loop.set_postfix(d_loss=epoch_d_loss / (loop.n + 1), g_loss=epoch_g_loss / (loop.n + 1))            
-
-            # Print memory usage every 200 batches
-            if batch_idx % 200 == 0:
-                memory_allocated = torch.cuda.memory_allocated(device)
-                memory_reserved = torch.cuda.memory_reserved(device)
-                print(f"Batch {batch_idx}: Memory Allocated: {memory_allocated / (1024 ** 2):.2f} MB, Memory Reserved: {memory_reserved / (1024 ** 2):.2f} MB")
 
         if save_checkpoints and (epochs > 10):
             if epoch in [int(epochs / 4) - 1, 2 * int(epochs / 4) - 1, 3 * int(epochs / 4) - 1, epochs - 1]:
