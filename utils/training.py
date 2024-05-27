@@ -195,7 +195,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             
             # Optionally add noise to discriminator inputs
             if add_noise:
-                noise = torch.randn_like(fake_lab) * noise_std
+                noise = torch.randn_like(fake_lab, device=device) * noise_std
                 fake_lab += noise
                 real_lab += noise
 
@@ -204,12 +204,12 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             
             if label_smoothing:
                 # Apply label smoothing only to real labels
-                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.90  # Smooth real labels between 0.9 and 0.95
+                smooth_real_labels = torch.rand_like(pred_real, device=device) * 0.05 + 0.90  # Smooth real labels between 0.9 and 0.95
                 loss_real = criterion(pred_real, smooth_real_labels)
-                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
+                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake, device=device))
             else:
-                loss_real = criterion(pred_real, torch.ones_like(pred_real))
-                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
+                loss_real = criterion(pred_real, torch.ones_like(pred_real, device=device))
+                loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake, device=device))
 
             d_loss = (loss_fake + loss_real) / 2
             d_loss.backward()
@@ -221,7 +221,7 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             fake_ab = generator(l)
             fake_lab = torch.cat((l, fake_ab), dim=1)
             pred_fake_gen = discriminator(fake_lab)
-            g_loss_adv = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen))
+            g_loss_adv = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen, device=device))
             if l1_lambda > 0.0:
                 g_loss_l1 = F.l1_loss(fake_ab, ab)  # L1 loss component
                 g_loss = g_loss_adv + l1_lambda * g_loss_l1  # Combined GAN loss with L1 regularization
