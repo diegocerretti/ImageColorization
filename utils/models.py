@@ -191,7 +191,7 @@ class EncoderDecoderGenerator(nn.Module): # that of the paper
     An encoder-decoder generator model for GANs.
 
     The architecture consists of an encoder network that downsamples the input grayscal image,
-    and a decoder network that upsamplesthe encoded representation to produce the predicted AB channels.
+    and a decoder network that upsamples the encoded representation to produce the predicted AB channels.
 
     Attributes:
         encoder (nn.Sequential): A sequential container of convolutional layers, batch normalization,
@@ -218,15 +218,9 @@ class EncoderDecoderGenerator(nn.Module): # that of the paper
             nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1),  # 32x32
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),  # 16x16
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
         ) 
 
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),  # 32x32
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
             nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  # 64x64
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
@@ -261,8 +255,8 @@ class PatchGAN(nn.Module):
     representing the probability that the input image is real or generated for each path.
     The architecture consists of several convolutional layers with LeakyReLU activations,
     batch normalization, and a final sigmoid activation function.
-    The final output is of size 16x16, making the receptive field of each pacth 46x46.
-
+    The final output is of size 16x16.
+    
     Attributes:
         conv (nn.Sequential): A sequential container of convolutional layers, batch normalization,
                               and LeakyReLU activations.
