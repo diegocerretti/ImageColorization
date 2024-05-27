@@ -142,9 +142,11 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
               disc_opt: torch.optim.Optimizer, gen_opt: torch.optim.Optimizer,
               criterion: torch.nn.modules.loss._Loss, train_loader: DataLoader,
               device: Optional[str] = "cuda", l1_lambda: float = 0.0, label_smoothing: Optional[bool] = False,
+              add_noise: Optional[bool] = False, noise_std: float = 0.1,
               save_losses: Optional[bool] = False, save_checkpoints: Optional[bool] = False, file_name: Optional[str] = ""):
     """
-    Function to train the GAN model with optional L1 regularization for image colorization.
+    Function to train the GAN model with optional label smoothing, 
+    optional L1 regularization for generator and optional noise to discriminator inputs.
 
     Args:
         epochs (int): Number of training epochs.
@@ -156,7 +158,9 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
         train_loader (torch.utils.data.dataloader.DataLoader): DataLoader for the training data.
         device (Optional[str]): Device to use for training (e.g., "cuda" or "cpu"). Default is "cuda".
         l1_lambda (float): Weight for the L1 loss component. Default is 0.0 (no regularization).
-        label_smoothing (Optional[bool]): Applies label smoothing to true labels to reduce overconfidence. Smoothing value is in [0.95, 1].
+        label_smoothing (Optional[bool]): Applies label smoothing to true labels to reduce overconfidence. Smoothing value is in [0.9, 0.95].
+        add_noise (Optional[bool]): Adds noise to the discriminator inputs to prevent vanishing gradients. Default is False.
+        noise_std (float): Standard deviation of the noise to add to the discriminator inputs. Default is 0.1.
         save_losses (Optional[bool]): Whether to save the training losses to a file. Default is False.
         save_checkpoints (Optional[bool]): Whether to save the generator checkpoints during training. Default is False.
         file_name (Optional[str]): Base name for saving model checkpoints and losses file. Default is an empty string.
@@ -188,13 +192,19 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             fake_ab = generator(l).detach()
             fake_lab = torch.cat((l, fake_ab), dim=1)
             real_lab = torch.cat((l, ab), dim=1)
+            
+            # Optionally add noise to discriminator inputs
+            if add_noise:
+                noise = torch.randn_like(fake_lab) * noise_std
+                fake_lab += noise
+                real_lab += noise
 
             pred_fake = discriminator(fake_lab)
             pred_real = discriminator(real_lab)
             
             if label_smoothing:
                 # Apply label smoothing only to real labels
-                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.95  # Smooth real labels between 0.95 and 1
+                smooth_real_labels = torch.rand_like(pred_real) * 0.05 + 0.90  # Smooth real labels between 0.9 and 0.95
                 loss_real = criterion(pred_real, smooth_real_labels)
                 loss_fake = criterion(pred_fake, torch.zeros_like(pred_fake))
             else:
@@ -208,6 +218,8 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
 
             # Train Generator
             gen_opt.zero_grad()
+            fake_ab = generator(l)
+            fake_lab = torch.cat((l, fake_ab), dim=1)
             pred_fake_gen = discriminator(fake_lab)
             g_loss_adv = criterion(pred_fake_gen, torch.ones_like(pred_fake_gen))
             if l1_lambda > 0.0:
@@ -222,8 +234,8 @@ def train_gan(epochs: int, discriminator: torch.nn.Module, generator: torch.nn.M
             loop.set_postfix(d_loss=epoch_d_loss / (loop.n + 1), g_loss=epoch_g_loss / (loop.n + 1))            
 
         if save_checkpoints and (epochs > 10):
-            if epoch in [int(epochs / 3) - 1, 2 * int(epochs / 3) - 1, epochs - 1]:
-                # save three checkpoints
+            if epoch in [int(epochs / 4) - 1, 2 * int(epochs / 4) - 1, 3 * int(epochs / 4) - 1, epochs - 1]:
+                # save four checkpoints
                 save_model(generator, f"{file_name}_{epoch + 1}")
 
         d_losses.append(epoch_d_loss / len(train_loader))

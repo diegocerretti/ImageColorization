@@ -23,8 +23,7 @@ class CNN(nn.Module):
     Attributes:
         height (int): Height of the input image.
         width (int): Width of the input image.
-        features (nn.Sequential): Sequential container of convolutional layers, batch normalization,
-                                  and ReLU activations.
+        features (nn.Sequential): Sequential container of convolutional layers, batch normalization, and ReLU activations.
         flatten (nn.Flatten): Layer to flatten the output of the convolutional layers.
         fc1 (nn.Linear): First fully connected layer.
         fc2 (nn.Linear): Second fully connected layer that outputs the final prediction.
@@ -46,37 +45,37 @@ class CNN(nn.Module):
         self.height = height
         self.width = width
         self.conv = nn.Sequential(
-            nn.Conv2d(1, 4, kernel_size=3, stride=2, padding=2),  # Conv1
+            nn.Conv2d(1, 4, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(4),
             nn.ReLU(),
-            nn.Conv2d(4, 8, kernel_size=3, stride=2, padding=2),  # Conv2
+            nn.Conv2d(4, 8, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(8),
             nn.ReLU(),
-            nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=2),  # Conv3
+            nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=2),  # Conv4
+            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=2),  # Conv5
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=2),  # Conv6
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=2),
             nn.ReLU(),
             nn.BatchNorm2d(128),
-            nn.Conv2d(128, 32, kernel_size=3, stride=2, padding=2),  # Conv7
+            nn.Conv2d(128, 32, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Conv2d(32, 8, kernel_size=3, stride=2, padding=2),  # Conv8
+            nn.Conv2d(32, 8, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(8),
             nn.ReLU(),
-            nn.Conv2d(8, 1, kernel_size=3, stride=2, padding=2),  # Conv9
+            nn.Conv2d(8, 1, kernel_size=3, stride=2, padding=2),
             nn.BatchNorm2d(1),
             nn.ReLU(),
         )
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(9, 64)
-        self.fc2 = nn.Linear(64, 2 * self.height * self.width)  # adjust accordingly
+        self.fc2 = nn.Linear(64, 2 * self.height * self.width)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor):
@@ -99,11 +98,10 @@ class CNN(nn.Module):
     
 class UNet(nn.Module):
     """
-    A U-Net model for image colorization tasks.
+    A U-Net model.
 
-    This model consists of a contracting path (encoder) to capture context and a symmetric expanding path (decoder) 
-    that enables precise localization. It uses convolutional layers with ReLU activations and skip connections 
-    to combine high-resolution features from the contracting path with the upsampled output.
+    This model consists of a contracting path (encoder) and a symmetric expanding path (decoder).
+    It uses convolutional layers with ReLU activations and skip connections from the contracting path to the upsampled output.
 
     Attributes:
         conv1 (nn.Conv2d): First convolutional layer in the encoder.
@@ -125,7 +123,6 @@ class UNet(nn.Module):
         t_conv4 (nn.ConvTranspose2d): Fourth transposed convolutional layer in the decoder.
         output (nn.Conv2d): Output convolutional layer with 2 output channels.
         sigmoid (nn.Sigmoid): Sigmoid activation function for the output.
-
 
     Methods:
         forward(x: torch.Tensor) -> torch.Tensor:
@@ -161,15 +158,18 @@ class UNet(nn.Module):
 
     def forward(self, x):
         """
-        Implements the forward pass for the given data `x`.
-        :param x: The input data.
-        :return: The neural network output.
+        Defines the forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input grayscale image tensor of shape (batch_size, 1, height, width).
+
+        Returns:
+            torch.Tensor: Predicted A and B channel tensors of shape (batch_size, 2, height, width).
         """
         x_1 = F.relu(self.bn1(self.conv1(x)))
         x_2 = F.relu(self.bn2(self.conv2(x_1)))
         x_3 = F.relu(self.bn3(self.conv3(x_2)))
         x_4 = F.relu(self.bn4(self.conv4(x_3)))
-
 
         x_5 = F.relu(self.bn5(self.conv5(x_4)))
 
@@ -181,7 +181,126 @@ class UNet(nn.Module):
         x_8 = torch.cat((x_8, x_1), 1)
         x_9 = F.relu(self.t_conv4(x_8))
         x_9 = torch.cat((x_9, x), 1)
+        
         x = self.output(x_9)
+        x = self.sigmoid(x)
+        return x
+    
+class EncoderDecoderGenerator(nn.Module): # that of the paper
+    """
+    An encoder-decoder generator model for GANs.
+
+    The architecture consists of an encoder network that downsamples the input grayscal image,
+    and a decoder network that upsamplesthe encoded representation to produce the predicted AB channels.
+
+    Attributes:
+        encoder (nn.Sequential): A sequential container of convolutional layers, batch normalization,
+                                 and LeakyReLU activations for the encoder network.
+        decoder (nn.Sequential): A sequential container of transposed convolutional layers, batch normalization,
+                                 and LeakyReLU activations for the decoder network.
+        sigmoid (nn.Sigmoid): A sigmoid activation function applied to the final output.
+
+    Methods:
+        forward(x: torch.Tensor) -> torch.Tensor:
+            Defines the forward pass of the model.
+    """
+    def __init__(self):
+        """
+        Initializes the EncoderDecoderGenerator.
+        """
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 128, kernel_size=4, stride=2, padding=1),  # image size: 128x128
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),  # 64x64
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1),  # 32x32
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1),  # 16x16
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+        ) 
+
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),  # 32x32
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  # 64x64
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # 128x128
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.ConvTranspose2d(128, 2, kernel_size=4, stride=2, padding=1),  # 256x256
+        )
+        
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x: torch.Tensor):
+        """
+        Defines the forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input grayscale image tensor of shape (batch_size, 1, height, width).
+
+        Returns:
+            torch.Tensor: Predicted A and B channel tensors of shape (batch_size, 2, height, width).
+        """
+        x = self.encoder(x)
+        x = self.decoder(x)
+        x = self.sigmoid(x)
+        return x
+    
+class PatchGAN(nn.Module):
+    """
+    A PatchGAN discriminator model for GANs.
+
+    This model takes a 3-channel image as input and outputs a single channel tensor,
+    representing the probability that the input image is real or generated for each path.
+    The architecture consists of several convolutional layers with LeakyReLU activations,
+    batch normalization, and a final sigmoid activation function.
+    The final output is of size 16x16, making the receptive field of each pacth 46x46.
+
+    Attributes:
+        conv (nn.Sequential): A sequential container of convolutional layers, batch normalization,
+                              and LeakyReLU activations.
+        sigmoid (nn.Sigmoid): A sigmoid activation function applied to the final output.
+
+    Methods:
+        forward(x: torch.Tensor) -> torch.Tensor:
+            Defines the forward pass of the model.
+    """
+    def __init__(self):
+        """
+        Initializes the PatchGAN model.
+        """
+        super().__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1),  # image size: 128x128
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1), # 64x64
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1), # 32x32
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(256, 1, kernel_size=4, stride=2, padding=1), # 16x16
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x: torch.Tensor):
+        """
+        Defines the forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input image tensor of shape (batch_size, 3, height, width).
+
+        Returns:
+            torch.Tensor: Predicted probability map of shape (batch_size, 1, 16, 16).
+        """
+        x = self.conv(x)
         x = self.sigmoid(x)
         return x
 
@@ -205,7 +324,7 @@ class BaselineCNN(nn.Module):
 
     def __init__(self):
         """
-        Initializes the model.
+        Initializes the baseline model.
         """
         super().__init__()
         self.layers = nn.Sequential(
