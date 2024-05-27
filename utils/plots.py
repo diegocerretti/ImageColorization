@@ -143,9 +143,9 @@ def plot_model_pred(l: torch.Tensor, model: torch.nn.Module, device: Optional[st
         model (torch.nn.Module): The PyTorch model used for colorization.
         device (Optional[str]): The device to use for computations. Defaults to "cuda".
     """
-    input = l.to(device).unsqueeze(0)
+    input = l.unsqueeze(0).to(device)
     ab_pred = model(input).squeeze(0)
-    reconstruct_lab(l, ab_pred.detach().cpu())
+    reconstruct_lab(l.squeeze(0).cpu(), ab_pred.detach().cpu())
     
 def plot_losses(loss1: List[float], loss2: List[float],
                 label1: Optional[str] = "Train", label2: Optional[str] = "Test"):
