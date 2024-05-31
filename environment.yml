@@ -5,10 +5,6 @@ channels:
 dependencies:
   - python=3.12
   - numpy
-  - anaconda::pandas
-  - conda-forge::matplotlib
-  - anaconda::scipy
-  - anaconda::scikit-learn
   - prompt-toolkit
   - pure_eval
   - jedi
@@ -68,6 +64,7 @@ dependencies:
   - pytorch
   - torchvision
   - scikit-image
-  - conda-forge::tqdm
-  - conda-forge::scienceplots
+  - pip:
+    - matplotlib
+
 prefix: C:\Users\sandr\anaconda3\envs\colorization
