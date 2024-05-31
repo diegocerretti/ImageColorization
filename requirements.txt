@@ -1,5 +1,5 @@
 altair==5.3.0
-asttokens @ file:///home/conda/feedstock_root/build_artifacts/asttokens_1698341106958/work
+asttokens
 attrs==23.2.0
 blinker==1.8.2
 Bottleneck @ file:///D:/bld/bottleneck_1708966158567/work
