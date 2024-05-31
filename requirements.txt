@@ -40,7 +40,7 @@ MarkupSafe
 matplotlib 
 matplotlib-inline 
 mdurl==0.1.2
-mkl-service==2.4.1
+mkl-service
 mpmath 
 munkres==1.1.4
 nest_asyncio 
