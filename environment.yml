@@ -70,4 +70,5 @@ dependencies:
   - scikit-image
   - conda-forge::tqdm
   - conda-forge::scienceplots
+  - torch
 prefix: C:\Users\sandr\anaconda3\envs\colorization
