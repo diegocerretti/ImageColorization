@@ -12,11 +12,11 @@ Authors: Diego Cerretti, Beatrice Citterio, Mattia Martino, Sandro Mikautadze
 
 import streamlit as st
 from PIL import Image
-import torch
-import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import io
 import datetime
+import torch
+import torchvision.transforms as transforms
 from utils.models import UNet, EncoderDecoderGenerator, load_model
 from utils.plots import plot_model_pred
 from skimage.color import rgb2lab
