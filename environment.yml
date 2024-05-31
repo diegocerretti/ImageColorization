@@ -11,13 +11,13 @@ dependencies:
   - scipy
   - scikit-learn
   - pillow  
-  - torch=2.2.2
-  - torchvision
-  - torchaudio
   - cudatoolkit=12.1
   - scikit-image
   - tqdm
   - scienceplots
   - pip
   - pip:
+      - torch==2.2.2
+      - torchvision
+      - torchaudio
       - utils
