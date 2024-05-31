@@ -65,10 +65,10 @@ dependencies:
   - ipykernel
   - torchaudio
   # - pytorch-cuda=12.1
-  - pytorch
+  # - pytorch
   - torchvision
   - scikit-image
   - conda-forge::tqdm
   - conda-forge::scienceplots
-  # - torch
+  - torch=2.2.2
 prefix: C:\Users\sandr\anaconda3\envs\colorization
