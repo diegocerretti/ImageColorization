@@ -9,7 +9,7 @@ In this work, we assess the performance of various deep learning architectures t
 
 - **losses/**: Contains the loss values of the trained models.
 - **models/**: Contains the weights of the trained models, including weights at various epochs during training.
-- **outputs/**, **test_images/**, **report_images/**: Contains the black-and-white test images used for evaluation, colorized images and plots used in the report.
+- **outputs/**, **test_images/**, **report_images/**: Contain the black-and-white test images used for evaluation, colorized images and plots used in the report.
 - **utils/**: Contains a library with functions and classes used in the code, including:
   - **dataset.py**: Functions related to data loading and preprocessing.
   - **metrics.py**: Functions to compute evaluation metrics.
@@ -26,4 +26,3 @@ In this work, we assess the performance of various deep learning architectures t
 - **gan.ipynb**: Contains code for initial GAN models and experiments.
 - **report_plots.ipynb**: Code to generate the plots used in the report.
 - **tests.ipynb**: Code to generate colorized images from test inputs.
-- **app.py**: Code to run the Streamlit web app (to be completed).
