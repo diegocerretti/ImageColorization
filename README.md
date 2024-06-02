@@ -1,6 +1,6 @@
 # Image Colorization With Deep Learning
 
-**Authors**: Beatrice Citterio, Diego Cerretti, Mattia Martino, Sandro Mikautadze
+**Authors**: Diego Cerretti, Beatrice Citterio, Mattia Martino, Sandro Mikautadze
 
 **Web App**: TBA
 
